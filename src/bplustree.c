@@ -362,7 +362,7 @@ static key_t non_leaf_split_left(struct bplus_tree *tree, struct bplus_node *nod
 
 static key_t non_leaf_split_right1(struct bplus_tree *tree, struct bplus_node *node,
                         	   struct bplus_node *right, struct bplus_node *l_ch,
-                        	   struct bplus_node *r_ch, key_t key, int insert)
+                               struct bplus_node *r_ch, key_t key)
 {
         int i;
 
@@ -472,7 +472,7 @@ static int non_leaf_insert(struct bplus_tree *tree, struct bplus_node *node,
                 if (insert < split) {
                         split_key = non_leaf_split_left(tree, node, sibling, l_ch, r_ch, key, insert);
                 } else if (insert == split) {
-                        split_key = non_leaf_split_right1(tree, node, sibling, l_ch, r_ch, key, insert);
+                        split_key = non_leaf_split_right1(tree, node, sibling, l_ch, r_ch, key);
                 } else {
                         split_key = non_leaf_split_right2(tree, node, sibling, l_ch, r_ch, key, insert);
                 }
@@ -554,7 +554,7 @@ static key_t leaf_split_right(struct bplus_tree *tree, struct bplus_node *leaf,
         return key(right)[0];
 }
 
-static void leaf_simple_insert(struct bplus_tree *tree, struct bplus_node *leaf,
+static void leaf_simple_insert(struct bplus_node *leaf,
                 	       key_t key, long data, int insert)
 {
         memmove(&key(leaf)[insert + 1], &key(leaf)[insert], (leaf->children - insert) * sizeof(key_t));
@@ -599,7 +599,7 @@ static int leaf_insert(struct bplus_tree *tree, struct bplus_node *leaf, key_t k
                         return parent_node_build(tree, leaf, sibling, split_key);
                 }
         } else {
-                leaf_simple_insert(tree, leaf, key, data, insert);
+                leaf_simple_insert(leaf, key, data, insert);
                 node_flush(tree, leaf);
         }
 
@@ -734,7 +734,7 @@ static void non_leaf_merge_from_right(struct bplus_tree *tree, struct bplus_node
         node->children += right->children - 1;
 }
 
-static inline void non_leaf_simple_remove(struct bplus_tree *tree, struct bplus_node *node, int remove)
+static inline void non_leaf_simple_remove(struct bplus_node *node, int remove)
 {
         assert(node->children >= 2);
         memmove(&key(node)[remove], &key(node)[remove + 1], (node->children - remove - 2) * sizeof(key_t));
@@ -755,7 +755,7 @@ static void non_leaf_remove(struct bplus_tree *tree, struct bplus_node *node, in
                         node_delete(tree, node, NULL, NULL);
                         node_flush(tree, root);
                 } else {
-                        non_leaf_simple_remove(tree, node, remove);
+                        non_leaf_simple_remove( node, remove);
                         node_flush(tree, node);
                 }
         } else if (node->children <= (_max_order + 1) / 2) {
@@ -783,7 +783,7 @@ static void non_leaf_remove(struct bplus_tree *tree, struct bplus_node *node, in
                         }
                 } else {
                         /* remove at first in case of overflow during merging with sibling */
-                        non_leaf_simple_remove(tree, node, remove);
+                        non_leaf_simple_remove( node, remove);
 
                         if (r_sib->children > (_max_order + 1) / 2) {
                                 non_leaf_shift_from_right(tree, node, r_sib, parent, i + 1);
@@ -803,12 +803,12 @@ static void non_leaf_remove(struct bplus_tree *tree, struct bplus_node *node, in
                         }
                 }
         } else {
-                non_leaf_simple_remove(tree, node, remove);
+                non_leaf_simple_remove( node, remove);
                 node_flush(tree, node);
         }
 }
 
-static void leaf_shift_from_left(struct bplus_tree *tree, struct bplus_node *leaf,
+static void leaf_shift_from_left( struct bplus_node *leaf,
                 		 struct bplus_node *left, struct bplus_node *parent,
                 		 int parent_key_index, int remove)
 {
@@ -825,8 +825,8 @@ static void leaf_shift_from_left(struct bplus_tree *tree, struct bplus_node *lea
         key(parent)[parent_key_index] = key(leaf)[0];
 }
 
-static void leaf_merge_into_left(struct bplus_tree *tree, struct bplus_node *leaf,
-                		 struct bplus_node *left, int parent_key_index, int remove)
+static void leaf_merge_into_left( struct bplus_node *leaf,
+                         struct bplus_node *left, int remove)
 {
         /* merge into left sibling, sum = leaf->children - 1*/
         memmove(&key(left)[left->children], &key(leaf)[0], remove * sizeof(key_t));
@@ -836,7 +836,7 @@ static void leaf_merge_into_left(struct bplus_tree *tree, struct bplus_node *lea
         left->children += leaf->children - 1;
 }
 
-static void leaf_shift_from_right(struct bplus_tree *tree, struct bplus_node *leaf,
+static void leaf_shift_from_right(struct bplus_node *leaf,
                                   struct bplus_node *right, struct bplus_node *parent,
                                   int parent_key_index)
 {
@@ -854,7 +854,7 @@ static void leaf_shift_from_right(struct bplus_tree *tree, struct bplus_node *le
         key(parent)[parent_key_index] = key(right)[0];
 }
 
-static inline void leaf_merge_from_right(struct bplus_tree *tree, struct bplus_node *leaf,
+static inline void leaf_merge_from_right(struct bplus_node *leaf,
                                          struct bplus_node *right)
 {
         memmove(&key(leaf)[leaf->children], &key(right)[0], right->children * sizeof(key_t));
@@ -862,7 +862,7 @@ static inline void leaf_merge_from_right(struct bplus_tree *tree, struct bplus_n
         leaf->children += right->children;
 }
 
-static inline void leaf_simple_remove(struct bplus_tree *tree, struct bplus_node *leaf, int remove)
+static inline void leaf_simple_remove(struct bplus_node *leaf, int remove)
 {
         memmove(&key(leaf)[remove], &key(leaf)[remove + 1], (leaf->children - remove - 1) * sizeof(key_t));
         memmove(&data(leaf)[remove], &data(leaf)[remove + 1], (leaf->children - remove - 1) * sizeof(off_t));
@@ -890,7 +890,7 @@ static int leaf_remove(struct bplus_tree *tree, struct bplus_node *leaf, key_t k
                         tree->level = 0;
                         node_delete(tree, leaf, NULL, NULL);
                 } else {
-                        leaf_simple_remove(tree, leaf, remove);
+                        leaf_simple_remove(leaf, remove);
                         node_flush(tree, leaf);
                 }
         } else if (leaf->children <= (_max_entries + 1) / 2) {
@@ -903,14 +903,14 @@ static int leaf_remove(struct bplus_tree *tree, struct bplus_node *leaf, key_t k
                 /* decide which sibling to be borrowed from */
                 if (sibling_select(l_sib, r_sib, parent, i) == LEFT_SIBLING) {
                         if (l_sib->children > (_max_entries + 1) / 2) {
-                                leaf_shift_from_left(tree, leaf, l_sib, parent, i, remove);
+                                leaf_shift_from_left( leaf, l_sib, parent, i, remove);
                                 /* flush leaves */
                                 node_flush(tree, leaf);
                                 node_flush(tree, l_sib);
                                 node_flush(tree, r_sib);
                                 node_flush(tree, parent);
                         } else {
-                                leaf_merge_into_left(tree, leaf, l_sib, i, remove);
+                                leaf_merge_into_left( leaf, l_sib, remove);
                                 /* delete empty leaf and flush */
                                 node_delete(tree, leaf, l_sib, r_sib);
                                 /* trace upwards */
@@ -918,17 +918,17 @@ static int leaf_remove(struct bplus_tree *tree, struct bplus_node *leaf, key_t k
                         }
                 } else {
                         /* remove at first in case of overflow during merging with sibling */
-                        leaf_simple_remove(tree, leaf, remove);
+                        leaf_simple_remove( leaf, remove);
 
                         if (r_sib->children > (_max_entries + 1) / 2) {
-                                leaf_shift_from_right(tree, leaf, r_sib, parent, i + 1);
+                                leaf_shift_from_right( leaf, r_sib, parent, i + 1);
                                 /* flush leaves */
                                 node_flush(tree, leaf);
                                 node_flush(tree, l_sib);
                                 node_flush(tree, r_sib);
                                 node_flush(tree, parent);
                         } else {
-                                leaf_merge_from_right(tree, leaf, r_sib);
+                                leaf_merge_from_right( leaf, r_sib);
                                 /* delete empty right sibling flush */
                                 struct bplus_node *rr_sib = node_fetch(tree, r_sib->next);
                                 node_delete(tree, r_sib, leaf, rr_sib);
@@ -938,7 +938,7 @@ static int leaf_remove(struct bplus_tree *tree, struct bplus_node *leaf, key_t k
                         }
                 }
         } else {
-                leaf_simple_remove(tree, leaf, remove);
+                leaf_simple_remove( leaf, remove);
                 node_flush(tree, leaf);
         }
 
@@ -1045,7 +1045,7 @@ static off_t str_to_hex(char *c, int len)
 
 static inline void hex_to_str(off_t offset, char *buf, int len)
 {
-        const static char *hex = "0123456789ABCDEF";
+        static const char *hex = "0123456789ABCDEF";
         while (len-- > 0) {
                 buf[len] = hex[offset & 0xf];
                 offset >>= 4;
