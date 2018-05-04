@@ -1,9 +1,9 @@
-[![Build Status](https://travis-ci.org/romz-pl/amittai-btree.svg?branch=master)](https://travis-ci.org/romz-pl/amittai-btree)
-[![Coverage Status](https://codecov.io/gh/romz-pl/amittai-btree/badge.svg?branch=master)](https://codecov.io/gh/romz-pl/amittai-btree?branch=master)
+[![Build Status](https://travis-ci.org/romz-pl/leoma-btree.svg?branch=master)](https://travis-ci.org/romz-pl/leoma-btree)
+[![Coverage Status](https://codecov.io/gh/romz-pl/leoma-btree/badge.svg?branch=master)](https://codecov.io/gh/romz-pl/leoma-btree?branch=master)
 
-* This is the refactored version of Amittai's B+-tree implementation.
+* This is the refactored version of Loe Ma's B+-tree implementation.
 
-* The original code was downloaded from Amittai F. Aviram [web page](http://www.amittai.com/prose/bplustree_cpp.html)
+* The original code was downloaded from Loe Ma GitHub [web page](https://github.com/begeekmyfriend/bplustree).
 
 * For more information about B+ trees see:
    * [wiki pages](https://en.wikipedia.org/wiki/B+_tree) in Wikipedia
